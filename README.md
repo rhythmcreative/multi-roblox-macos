@@ -37,8 +37,8 @@ ___
 
 [![Typing SVG](https://readme-typing-svg.herokuapp.com?font=Fira+Code&size=23&pause=1000&color=F7F7F7&vCenter=true&width=435&height=30&lines=INSTALLATION)](https://git.io/typing-svg)
 
-1. Download **`multiroblox-1.0.0-macos.zip`** from [Releases](https://github.com/rhythmcreative/multi-roblox-macos/releases/tag/v1.0.0).
-2. Unzip and drag **`multiroblox.app`** to your `/Applications` folder (or run it from Downloads).
+1. Download **`multiroblox.dmg`** or **`multiroblox.zip`** from [Releases](https://github.com/rhythmcreative/multi-roblox-macos/releases/tag/v1.0.0).
+2. Open the disk image or unzip, then move **`multiroblox.app`** to your `/Applications` folder.
 3. If macOS displays a security warning, open Terminal and run:
    ```bash
    xattr -cr /Applications/multiroblox.app
