@@ -4,7 +4,6 @@ go 1.23
 
 require (
 	github.com/ncruces/zenity v0.10.13
-	github.com/progrium/darwinkit v0.5.1-0.20240715194340-61b9e31a12fa
 	howett.net/plist v1.0.1
 )
 

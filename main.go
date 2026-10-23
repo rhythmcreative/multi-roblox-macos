@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"syscall"
@@ -19,6 +20,10 @@ import (
 	"github.com/rhythmcreative/multi-roblox-macos/internal/syncbreaker"
 	"github.com/rhythmcreative/multi-roblox-macos/internal/urlhandler"
 )
+
+func init() {
+	runtime.LockOSThread()
+}
 
 func findEnclosingAppBundle() string {
 	exe, err := os.Executable()
