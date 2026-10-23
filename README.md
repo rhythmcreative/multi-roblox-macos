@@ -8,7 +8,7 @@
 [![Apple Silicon](https://img.shields.io/badge/Apple%20Silicon-M1--M4%20Native-grey?style=for-the-badge&logo=apple&logoColor=white)](https://apple.com)
 [![Roblox](https://img.shields.io/badge/Roblox-Multi--Instance-E2231A?style=for-the-badge&logo=roblox&logoColor=white)](https://roblox.com)
 [![Go](https://img.shields.io/badge/Go-1.23-00ADD8?style=for-the-badge&logo=go&logoColor=white)](https://golang.org)
-[![Release](https://img.shields.io/badge/Release-v2.2.0-success?style=for-the-badge)](https://github.com/rhythmcreative/multi-roblox-macos/releases)
+[![Release](https://img.shields.io/badge/Release-v1.0.0-success?style=for-the-badge)](https://github.com/rhythmcreative/multi-roblox-macos/releases)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
 
 </div>
@@ -37,7 +37,7 @@ ___
 
 [![Typing SVG](https://readme-typing-svg.herokuapp.com?font=Fira+Code&size=23&pause=1000&color=F7F7F7&vCenter=true&width=435&height=30&lines=INSTALLATION)](https://git.io/typing-svg)
 
-1. Download **`multiroblox-2.2.0-macos.zip`** from [Releases](https://github.com/rhythmcreative/multi-roblox-macos/releases/tag/v2.2.0).
+1. Download **`multiroblox-1.0.0-macos.zip`** from [Releases](https://github.com/rhythmcreative/multi-roblox-macos/releases/tag/v1.0.0).
 2. Unzip and drag **`multiroblox.app`** to your `/Applications` folder (or run it from Downloads).
 3. If macOS displays a security warning, open Terminal and run:
    ```bash
