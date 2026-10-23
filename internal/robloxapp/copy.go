@@ -1,19 +1,23 @@
 package robloxapp
 
 import (
-	"errors"
 	"io"
 	"os"
+	"path/filepath"
 
-	"github.com/Insadem/multi-roblox-macos/pkg/fspath"
+	"github.com/rhythmcreative/multi-roblox-macos/pkg/fspath"
 )
 
 type Copy struct {
-	dir string
+	dir     string
+	appPath string
 }
 
 func (b Copy) Path() string {
-	return b.dir + "/Roblox.app"
+	if b.appPath != "" {
+		return b.appPath
+	}
+	return filepath.Join(b.dir, "Roblox.app")
 }
 
 // Close releases all associated resources with the copy.
@@ -26,14 +30,13 @@ var _ io.Closer = (*Copy)(nil)
 func copyDestDir() (string, error) {
 	d, err := fspath.TMPDir.Get()
 	if err != nil {
+		d = os.TempDir()
+	}
+
+	subDir := filepath.Join(d, "multi-roblox")
+	if err := os.MkdirAll(subDir, 0755); err != nil {
 		return "", err
 	}
 
-	err = os.Mkdir(d, 0777)
-	if err != nil && !errors.Is(err, os.ErrExist) {
-		return "", err
-	}
-
-	path, err := os.MkdirTemp(d, "")
-	return path, err
+	return os.MkdirTemp(subDir, "inst_")
 }

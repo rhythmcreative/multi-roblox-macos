@@ -3,13 +3,13 @@ package macosapp
 import (
 	"os/exec"
 
-	"github.com/Insadem/multi-roblox-macos/internal/robloxapp"
 	"github.com/progrium/darwinkit/helper/action"
 	"github.com/progrium/darwinkit/helper/layout"
 	"github.com/progrium/darwinkit/macos"
 	"github.com/progrium/darwinkit/macos/appkit"
 	"github.com/progrium/darwinkit/macos/foundation"
 	"github.com/progrium/darwinkit/objc"
+	"github.com/rhythmcreative/multi-roblox-macos/internal/robloxapp"
 )
 
 func Run(clean func()) {
@@ -17,33 +17,36 @@ func Run(clean func()) {
 		app.SetActivationPolicy(appkit.ApplicationActivationPolicyRegular)
 		app.ActivateIgnoringOtherApps(true)
 
-		w := appkit.NewWindowWithContentRectStyleMaskBackingDefer(foundation.Rect{Size: foundation.Size{Width: 32, Height: 32}},
+		w := appkit.NewWindowWithContentRectStyleMaskBackingDefer(
+			foundation.Rect{Size: foundation.Size{Width: 320, Height: 160}},
 			appkit.ClosableWindowMask|appkit.TitledWindowMask|appkit.MiniaturizableWindowMask,
-			appkit.BackingStoreBuffered, false)
+			appkit.BackingStoreBuffered,
+			false,
+		)
 		objc.Retain(&w)
 
-		lable := appkit.NewLabel("start any roblox game via browser")
-		dButton := appkit.NewButtonWithTitle("join discord server")
-		cButton := appkit.NewButtonWithTitle("close all instances")
+		label := appkit.NewLabel("Multi-Roblox is active!\nLaunch games from Roblox website.")
+		dButton := appkit.NewButtonWithTitle("Fork on GitHub")
+		cButton := appkit.NewButtonWithTitle("Close all Roblox instances")
 
 		action.Set(dButton, func(sender objc.Object) {
-			exec.Command("open", "https://discord.gg/AwNAa7utbY").Run()
+			exec.Command("open", "https://github.com/rhythmcreative/multi-roblox-macos").Run()
 		})
 		action.Set(cButton, func(sender objc.Object) {
 			robloxapp.CloseAll()
 		})
 
-		stackView := appkit.StackView_StackViewWithViews([]appkit.IView{lable, dButton, cButton})
+		stackView := appkit.StackView_StackViewWithViews([]appkit.IView{label, dButton, cButton})
 		stackView.SetOrientation(appkit.UserInterfaceLayoutOrientationVertical)
 		stackView.SetDistribution(appkit.StackViewDistributionFillEqually)
 		stackView.SetAlignment(appkit.LayoutAttributeCenterX)
-		stackView.SetSpacing(10)
+		stackView.SetSpacing(12)
 
 		w.ContentView().AddSubview(stackView)
-		layout.PinEdgesToSuperView(stackView, foundation.EdgeInsets{Top: 10, Bottom: 10, Left: 20, Right: 20})
+		layout.PinEdgesToSuperView(stackView, foundation.EdgeInsets{Top: 16, Bottom: 16, Left: 20, Right: 20})
 
 		w.Center()
-		w.SetTitle("multi-roblox-macos")
+		w.SetTitle("Multi Roblox macOS")
 		w.MakeKeyAndOrderFront(nil)
 
 		delegate.SetApplicationShouldTerminateAfterLastWindowClosed(func(appkit.Application) bool {

@@ -1,62 +1,131 @@
 package main
 
 import (
+	"fmt"
 	"io"
+	"log"
+	"os"
 	"os/exec"
+	"os/signal"
+	"path/filepath"
+	"strings"
+	"sync"
+	"syscall"
+	"time"
 
-	"github.com/Insadem/multi-roblox-macos/internal/deeplink"
-	"github.com/Insadem/multi-roblox-macos/internal/infoplist"
-	"github.com/Insadem/multi-roblox-macos/internal/macosapp"
-	"github.com/Insadem/multi-roblox-macos/internal/robloxapp"
-	"github.com/Insadem/multi-roblox-macos/internal/syncbreaker"
-	"github.com/Insadem/multi-roblox-macos/internal/urlhandler"
+	"github.com/rhythmcreative/multi-roblox-macos/internal/deeplink"
+	"github.com/rhythmcreative/multi-roblox-macos/internal/macosapp"
+	"github.com/rhythmcreative/multi-roblox-macos/internal/robloxapp"
+	"github.com/rhythmcreative/multi-roblox-macos/internal/syncbreaker"
+	"github.com/rhythmcreative/multi-roblox-macos/internal/urlhandler"
 )
 
+func findEnclosingAppBundle() string {
+	exe, err := os.Executable()
+	if err != nil {
+		return ""
+	}
+	realExe, err := filepath.EvalSymlinks(exe)
+	if err == nil {
+		exe = realExe
+	}
+	idx := strings.Index(exe, ".app/Contents/MacOS/")
+	if idx != -1 {
+		return exe[:idx+4]
+	}
+	return ""
+}
+
 func main() {
-	urlhandler.Set("com.insadem.multiroblox", "roblox-player")
-	s := urlhandler.Check(urlhandler.ROBLOX_BUNDLE_IDENTIFIER, "roblox-player")
-	if s {
-		macosapp.Notification("can't set new deeplink")
-		return
+	appBundle := findEnclosingAppBundle()
+	bundleID := urlhandler.DEFAULT_APP_BUNDLE_IDENTIFIER
+
+	if appBundle != "" {
+		_ = urlhandler.RegisterBundle(appBundle)
 	}
 
-	cc := make(chan io.Closer)
-	func(cc chan<- io.Closer) {
-		go func() {
-			for url := range deeplink.Handler() {
-				copy, err := robloxapp.NewCopy()
-				if err != nil {
-					macosapp.Notification("can't make new app copy: " + err.Error())
-					continue
-				}
+	// Register as default handler for roblox-player & roblox
+	urlhandler.Set(bundleID, urlhandler.SCHEME_ROBLOX_PLAYER)
+	urlhandler.Set(bundleID, urlhandler.SCHEME_ROBLOX)
 
-				go func() { // not the best solution, but it's alright =). cost of 1 goroutine is ~8kb ram.
-					cc <- copy
-				}()
+	// If the bundle ID is still roblox and not ours, try legacy bundle ID as well
+	if urlhandler.Check(urlhandler.ROBLOX_BUNDLE_IDENTIFIER, urlhandler.SCHEME_ROBLOX_PLAYER) {
+		urlhandler.Set(urlhandler.LEGACY_APP_BUNDLE_IDENTIFIER, urlhandler.SCHEME_ROBLOX_PLAYER)
+		urlhandler.Set(urlhandler.LEGACY_APP_BUNDLE_IDENTIFIER, urlhandler.SCHEME_ROBLOX)
+	}
 
-				syncbreaker.Break()
-				err = exec.Command("open", "-a", copy.Path(), url).Run()
-				if err != nil {
-					macosapp.Notification("can't open roblox app copy: " + err.Error())
-					continue
-				}
+	// Continuous background watcher to unlink /RobloxPlayerUniq
+	watcher := syncbreaker.StartWatcher(250 * time.Millisecond)
 
-				err = infoplist.SetMultipleInstancesProhibition(copy.Path()+"/Contents/Info.plist", false)
-				if err != nil {
-					macosapp.Notification("can't set multi instance prohibition: " + err.Error())
-					continue
-				}
-				syncbreaker.Break()
-			}
-		}()
-	}(cc)
+	var copiesMu sync.Mutex
+	var activeCopies []io.Closer
 
-	macosapp.Run(func() { // handle app termination here
-		urlhandler.Set(urlhandler.ROBLOX_BUNDLE_IDENTIFIER, "roblox-player")
+	addCopy := func(c io.Closer) {
+		copiesMu.Lock()
+		activeCopies = append(activeCopies, c)
+		copiesMu.Unlock()
+	}
 
-		close(cc)
-		for c := range cc {
-			c.Close()
+	cleanupDone := false
+	var cleanupMu sync.Mutex
+	cleanup := func() {
+		cleanupMu.Lock()
+		if cleanupDone {
+			cleanupMu.Unlock()
+			return
 		}
-	})
+		cleanupDone = true
+		cleanupMu.Unlock()
+
+		log.Println("Restoring default URL handler and cleaning up...")
+		watcher.Stop()
+		urlhandler.RestoreDefault()
+
+		copiesMu.Lock()
+		for _, c := range activeCopies {
+			_ = c.Close()
+		}
+		activeCopies = nil
+		copiesMu.Unlock()
+	}
+
+	// Handle termination signals gracefully
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
+	go func() {
+		<-sigChan
+		cleanup()
+		os.Exit(0)
+	}()
+
+	// Listen for Roblox URLs triggered from the browser
+	go func() {
+		for url := range deeplink.Handler() {
+			log.Printf("Received Roblox launch URL: %s\n", url)
+
+			// Pulse syncbreaker before and during startup
+			syncbreaker.Break()
+			syncbreaker.Pulse(4*time.Second, 100*time.Millisecond)
+
+			appCopy, err := robloxapp.NewCopy()
+			if err != nil {
+				macosapp.Notification(fmt.Sprintf("Failed to clone Roblox: %v", err))
+				continue
+			}
+
+			addCopy(appCopy)
+
+			// Launch with -n (new instance) and pass the game URL
+			cmd := exec.Command("open", "-n", "-a", appCopy.Path(), url)
+			if err := cmd.Run(); err != nil {
+				macosapp.Notification(fmt.Sprintf("Failed to launch Roblox: %v", err))
+				continue
+			}
+
+			// Pulse again to ensure the newly spawned instance's semaphore is unlinked
+			syncbreaker.Pulse(3*time.Second, 100*time.Millisecond)
+		}
+	}()
+
+	macosapp.Run(cleanup)
 }

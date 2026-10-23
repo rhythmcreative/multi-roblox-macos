@@ -4,36 +4,48 @@ import (
 	"bytes"
 	"os"
 
-	"howett.net/plist" // TODO: swap this dependency with your own implementation
+	"howett.net/plist"
 )
 
-func SetMultipleInstancesProhibition(path string, prohibited bool) error {
-	file, err := os.Open(path)
+// ConfigureCopy updates both the bundle identifier and the multiple instances prohibition.
+func ConfigureCopy(path string, bundleIdentifier string, prohibited bool) error {
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
 
-	dec := plist.NewDecoder(file)
+	var val map[string]interface{}
+	dec := plist.NewDecoder(bytes.NewReader(data))
+	if err := dec.Decode(&val); err != nil {
+		return err
+	}
 
-	var val map[string]interface{} = nil
-	dec.Decode(&val)
+	if val == nil {
+		val = make(map[string]interface{})
+	}
 
+	if bundleIdentifier != "" {
+		val["CFBundleIdentifier"] = bundleIdentifier
+	}
 	val["LSMultipleInstancesProhibited"] = prohibited
 
 	buf := &bytes.Buffer{}
-	encoder := plist.NewEncoderForFormat(buf, dec.Format)
-	err = encoder.Encode(&val)
-	if err != nil {
+	format := dec.Format
+	if format == 0 {
+		format = plist.BinaryFormat
+	}
+	enc := plist.NewEncoderForFormat(buf, format)
+	if err := enc.Encode(val); err != nil {
 		return err
 	}
 
-	os.WriteFile(path, buf.Bytes(), 0644)
+	return os.WriteFile(path, buf.Bytes(), 0644)
+}
 
-	err = file.Sync()
-	if err != nil {
-		return err
-	}
+func SetMultipleInstancesProhibition(path string, prohibited bool) error {
+	return ConfigureCopy(path, "", prohibited)
+}
 
-	return nil
+func SetBundleIdentifier(path string, bundleIdentifier string) error {
+	return ConfigureCopy(path, bundleIdentifier, false)
 }

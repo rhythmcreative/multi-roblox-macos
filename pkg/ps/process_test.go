@@ -20,8 +20,6 @@ func TestFindProcess(t *testing.T) {
 }
 
 func TestProcesses(t *testing.T) {
-	// This test works because there will always be SOME processes
-	// running.
 	p, err := Processes()
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -32,14 +30,15 @@ func TestProcesses(t *testing.T) {
 	}
 
 	found := false
+	currentPid := os.Getpid()
 	for _, p1 := range p {
-		if p1.Executable() == "gopls" || p1.Executable() == "go.exe" {
+		if p1.Pid() == currentPid {
 			found = true
 			break
 		}
 	}
 
 	if !found {
-		t.Fatal("should have Go")
+		t.Fatal("should have found current process in process list")
 	}
 }

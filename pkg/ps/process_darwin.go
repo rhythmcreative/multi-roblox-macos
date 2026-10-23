@@ -3,10 +3,46 @@
 
 package ps
 
+/*
+#include <libproc.h>
+#include <stdlib.h>
+#include <string.h>
+
+static int get_proc_list(pid_t **pids_out) {
+    int bytes = proc_listpids(PROC_ALL_PIDS, 0, NULL, 0);
+    if (bytes <= 0) return 0;
+
+    pid_t *pids = (pid_t *)malloc(bytes);
+    if (!pids) return 0;
+
+    int actual_bytes = proc_listpids(PROC_ALL_PIDS, 0, pids, bytes);
+    if (actual_bytes <= 0) {
+        free(pids);
+        return 0;
+    }
+
+    *pids_out = pids;
+    return actual_bytes / sizeof(pid_t);
+}
+
+static int get_proc_info(pid_t pid, int *ppid_out, char *name_out, int name_len) {
+    struct proc_bsdinfo info;
+    int ret = proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, sizeof(info));
+    if (ret != sizeof(info)) return -1;
+
+    *ppid_out = info.pbi_ppid;
+    if (info.pbi_name[0] != '\0') {
+        strncpy(name_out, info.pbi_name, name_len - 1);
+        name_out[name_len - 1] = '\0';
+    } else {
+        name_out[0] = '\0';
+    }
+    return 0;
+}
+*/
+import "C"
 import (
-	"bytes"
-	"encoding/binary"
-	"syscall"
+	"fmt"
 	"unsafe"
 )
 
@@ -29,111 +65,47 @@ func (p *DarwinProcess) Executable() string {
 }
 
 func findProcess(pid int) (Process, error) {
-	ps, err := processes()
-	if err != nil {
-		return nil, err
+	var ppid C.int
+	var nameBuf [256]C.char
+
+	ret := C.get_proc_info(C.pid_t(pid), &ppid, &nameBuf[0], 256)
+	if ret != 0 {
+		return nil, nil
 	}
 
-	for _, p := range ps {
-		if p.Pid() == pid {
-			return p, nil
-		}
-	}
-
-	return nil, nil
+	return &DarwinProcess{
+		pid:    pid,
+		ppid:   int(ppid),
+		binary: C.GoString(&nameBuf[0]),
+	}, nil
 }
 
 func processes() ([]Process, error) {
-	buf, err := darwinSyscall()
-	if err != nil {
-		return nil, err
+	var pids *C.pid_t
+	count := int(C.get_proc_list(&pids))
+	if count <= 0 {
+		return nil, fmt.Errorf("failed to retrieve process list")
 	}
+	defer C.free(unsafe.Pointer(pids))
 
-	procs := make([]*kinfoProc, 0, 50)
-	k := 0
-	for i := _KINFO_STRUCT_SIZE; i < buf.Len(); i += _KINFO_STRUCT_SIZE {
-		proc := &kinfoProc{}
-		err = binary.Read(bytes.NewBuffer(buf.Bytes()[k:i]), binary.LittleEndian, proc)
-		if err != nil {
-			return nil, err
+	slice := (*[1 << 28]C.pid_t)(unsafe.Pointer(pids))[:count:count]
+	procs := make([]Process, 0, count)
+
+	var ppid C.int
+	var nameBuf [256]C.char
+
+	for _, pid := range slice {
+		if pid <= 0 {
+			continue
 		}
-
-		k = i
-		procs = append(procs, proc)
-	}
-
-	darwinProcs := make([]Process, len(procs))
-	for i, p := range procs {
-		darwinProcs[i] = &DarwinProcess{
-			pid:    int(p.Pid),
-			ppid:   int(p.PPid),
-			binary: darwinCstring(p.Comm),
-		}
-	}
-
-	return darwinProcs, nil
-}
-
-func darwinCstring(s [16]byte) string {
-	i := 0
-	for _, b := range s {
-		if b != 0 {
-			i++
-		} else {
-			break
+		if C.get_proc_info(pid, &ppid, &nameBuf[0], 256) == 0 {
+			procs = append(procs, &DarwinProcess{
+				pid:    int(pid),
+				ppid:   int(ppid),
+				binary: C.GoString(&nameBuf[0]),
+			})
 		}
 	}
 
-	return string(s[:i])
-}
-
-func darwinSyscall() (*bytes.Buffer, error) {
-	mib := [4]int32{_CTRL_KERN, _KERN_PROC, _KERN_PROC_ALL, 0}
-	size := uintptr(0)
-
-	_, _, errno := syscall.Syscall6(
-		syscall.SYS___SYSCTL,
-		uintptr(unsafe.Pointer(&mib[0])),
-		4,
-		0,
-		uintptr(unsafe.Pointer(&size)),
-		0,
-		0)
-
-	if errno != 0 {
-		return nil, errno
-	}
-
-	bs := make([]byte, size)
-	_, _, errno = syscall.Syscall6(
-		syscall.SYS___SYSCTL,
-		uintptr(unsafe.Pointer(&mib[0])),
-		4,
-		uintptr(unsafe.Pointer(&bs[0])),
-		uintptr(unsafe.Pointer(&size)),
-		0,
-		0)
-
-	if errno != 0 {
-		return nil, errno
-	}
-
-	return bytes.NewBuffer(bs[0:size]), nil
-}
-
-const (
-	_CTRL_KERN         = 1
-	_KERN_PROC         = 14
-	_KERN_PROC_ALL     = 0
-	_KINFO_STRUCT_SIZE = 648
-)
-
-type kinfoProc struct {
-	_    [40]byte
-	Pid  int32
-	_    [199]byte
-	Comm [16]byte
-	_    [301]byte
-	PPid int32
-	_    [84]byte
+	return procs, nil
 }

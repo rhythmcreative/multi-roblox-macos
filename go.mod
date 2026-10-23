@@ -1,4 +1,4 @@
-module github.com/Insadem/multi-roblox-macos
+module github.com/rhythmcreative/multi-roblox-macos
 
 go 1.23
 

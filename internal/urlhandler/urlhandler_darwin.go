@@ -40,11 +40,16 @@ int checkHandler(const char *bundleIdentifier, const char *urlScheme) {
 */
 import "C"
 import (
+	"os/exec"
 	"unsafe"
 )
 
 const (
-	ROBLOX_BUNDLE_IDENTIFIER = "com.roblox.RobloxPlayer"
+	ROBLOX_BUNDLE_IDENTIFIER      = "com.roblox.RobloxPlayer"
+	DEFAULT_APP_BUNDLE_IDENTIFIER = "com.rhythmcreative.multiroblox"
+	LEGACY_APP_BUNDLE_IDENTIFIER  = "com.insadem.multiroblox"
+	SCHEME_ROBLOX_PLAYER          = "roblox-player"
+	SCHEME_ROBLOX                 = "roblox"
 )
 
 func Set(bundleIdentifier, urlScheme string) bool {
@@ -67,4 +72,21 @@ func Check(bundleIdentifier, urlScheme string) bool {
 
 	result := C.checkHandler(cBundleIdentifier, cURLScheme)
 	return result == 0
+}
+
+func SetAll(bundleIdentifier string) bool {
+	p1 := Set(bundleIdentifier, SCHEME_ROBLOX_PLAYER)
+	p2 := Set(bundleIdentifier, SCHEME_ROBLOX)
+	return p1 || p2
+}
+
+func RestoreDefault() {
+	Set(ROBLOX_BUNDLE_IDENTIFIER, SCHEME_ROBLOX_PLAYER)
+	Set(ROBLOX_BUNDLE_IDENTIFIER, SCHEME_ROBLOX)
+}
+
+// RegisterBundle registers an application bundle with LaunchServices via lsregister.
+func RegisterBundle(bundlePath string) error {
+	lsregister := "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
+	return exec.Command(lsregister, "-f", bundlePath).Run()
 }

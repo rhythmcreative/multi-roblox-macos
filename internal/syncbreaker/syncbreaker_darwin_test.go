@@ -3,25 +3,43 @@ package syncbreaker
 import (
 	"testing"
 	"time"
-
-	"github.com/Insadem/multi-roblox-macos/internal/robloxapp"
 )
 
 func TestBreak(t *testing.T) {
-	close, err := robloxapp.Open()
-	if err != nil {
-		t.Error(err)
-	}
-	defer close()
-	time.Sleep(time.Millisecond * 666)
+	// First ensure clean state
+	Break()
 
-	ok := Break()
-	if !ok {
-		t.Error("can't destroy semaphore")
+	// Create semaphore
+	if !CreateTestSemaphore() {
+		t.Fatal("failed to create test semaphore")
 	}
 
-	ok = Break()
-	if ok {
-		t.Error("expected to be not able destroy semaphore")
+	// Break should successfully destroy it
+	if !Break() {
+		t.Error("expected Break() to succeed destroying the semaphore")
+	}
+
+	// Second break should fail since it's already gone
+	if Break() {
+		t.Error("expected second Break() to return false")
+	}
+}
+
+func TestWatcher(t *testing.T) {
+	Break()
+
+	watcher := StartWatcher(50 * time.Millisecond)
+	defer watcher.Stop()
+
+	// Create semaphore while watcher is running
+	if !CreateTestSemaphore() {
+		t.Fatal("failed to create test semaphore")
+	}
+
+	// Wait for watcher to clear it
+	time.Sleep(150 * time.Millisecond)
+
+	if Break() {
+		t.Error("expected semaphore to have been unlinked by watcher")
 	}
 }
