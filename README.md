@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<p><i>Multi-instance Roblox for modern macOS, fully compatible with macOS Sonoma, Sequoia and 27.2+ on Apple Silicon (M1–M4) & Intel.</i></p>
+<p><i>Multi-instance Roblox for modern macOS.</i></p>
 
 [![macOS](https://img.shields.io/badge/macOS-27.2%2B%20%7C%20Sequoia%20%7C%20Sonoma-000000?style=for-the-badge&logo=apple&logoColor=white)](https://apple.com)
 [![Apple Silicon](https://img.shields.io/badge/Apple%20Silicon-M1--M4%20Native-grey?style=for-the-badge&logo=apple&logoColor=white)](https://apple.com)
