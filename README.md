@@ -1,64 +1,76 @@
-# multi-roblox-macos (Updated for Modern macOS & 27.2+)
+<h1 align="center">multi-roblox-macos</h1>
 
-A modern, high-performance Multi-Instance manager for Roblox on macOS.
+<div align="center">
 
-This is an updated fork of [Insadem/multi-roblox-macos](https://github.com/Insadem/multi-roblox-macos) rewritten and hardened for modern macOS versions (macOS 14 Sonoma, macOS 15 Sequoia, and macOS 27.2+).
+<p><i>Multi-instance Roblox for modern macOS, fully compatible with macOS Sonoma, Sequoia and 27.2+ on Apple Silicon (M1–M4) & Intel.</i></p>
 
----
+[![macOS](https://img.shields.io/badge/macOS-27.2%2B%20%7C%20Sequoia%20%7C%20Sonoma-000000?style=for-the-badge&logo=apple&logoColor=white)](https://apple.com)
+[![Apple Silicon](https://img.shields.io/badge/Apple%20Silicon-M1--M4%20Native-grey?style=for-the-badge&logo=apple&logoColor=white)](https://apple.com)
+[![Roblox](https://img.shields.io/badge/Roblox-Multi--Instance-E2231A?style=for-the-badge&logo=roblox&logoColor=white)](https://roblox.com)
+[![Go](https://img.shields.io/badge/Go-1.23-00ADD8?style=for-the-badge&logo=go&logoColor=white)](https://golang.org)
+[![Release](https://img.shields.io/badge/Release-v2.2.0-success?style=for-the-badge)](https://github.com/rhythmcreative/multi-roblox-macos/releases)
+[![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
 
-## 🚀 Key Improvements & Fixes
+</div>
 
-1. **macOS 27.2+ & AMFI / Gatekeeper Compatibility**:
-   - Modern macOS enforces strict code signing and sealed resources via AMFI (Apple Mobile File Integrity). In older versions, modifying `Info.plist` broke the signature, resulting in `Launch failed (NSCocoaErrorDomain Code 257 / Permission denied)`.
-   - This fork automatically strips quarantine extended attributes (`xattr -cr`) and re-signs cloned instances on-the-fly (`codesign --force --deep --sign -`), guaranteeing 100% launch success.
+___
 
-2. **Instant APFS Clone-on-Write**:
-   - Uses APFS copy-on-write (`cp -cR`) instead of slow recursive disk copy. Launching new instances is virtually instantaneous (<0.3s) and takes zero extra disk space until modified.
+[![Typing SVG](https://readme-typing-svg.herokuapp.com?font=Fira+Code&size=23&pause=1000&color=F7F7F7&vCenter=true&width=435&height=30&lines=ABOUT)](https://git.io/typing-svg)
 
-3. **Universal Binary (Native Apple Silicon + Intel)**:
-   - Built natively for Apple Silicon (M1/M2/M3/M4, `arm64`) and Intel (`x86_64`) as a universal binary.
+This is an updated, modernized fork of [`Insadem/multi-roblox-macos`](https://github.com/Insadem/multi-roblox-macos) rewritten specifically to support modern macOS releases, including **macOS 27.2**, macOS Sequoia, and macOS Sonoma.
 
-4. **Dynamic Semaphore Watcher**:
-   - Solves the startup race condition by actively pulsing and monitoring the `/RobloxPlayerUniq` POSIX semaphore during app launch and in the background.
+It allows you to run multiple independent Roblox accounts and client windows on your Mac at the same time without them closing each other.
 
-5. **Proper LaunchServices & Deep Link Registration**:
-   - `multiroblox.app` correctly declares `roblox-player` and `roblox` schemes in `CFBundleURLTypes` and registers with `lsregister`.
-   - Launches new instances with `open -n` and restores the original Roblox player handler upon exit.
+___
 
-6. **Robust Process Management via `libproc`**:
-   - Replaced fragile hardcoded `kinfo_proc` struct offsets with Darwin's native `libproc` API (`proc_listpids`, `proc_pidinfo`), ensuring seamless process tracking across any macOS kernel version.
+[![Typing SVG](https://readme-typing-svg.herokuapp.com?font=Fira+Code&size=23&pause=1000&color=F7F7F7&vCenter=true&width=435&height=30&lines=FEATURES)](https://git.io/typing-svg)
 
----
+- **macOS 27.2+ AMFI / Gatekeeper Fix**: Resolves the `Permission Denied (Code 257)` launch failure by automatically applying ad-hoc re-signing (`codesign --force --deep --sign -`) and stripping quarantine attributes.
+- **Ultra-Fast APFS Cloning**: Instantaneous Copy-on-Write (`cp -cR`) launches instances in <0.3s without consuming duplicate disk space.
+- **Universal Binary**: 100% native execution on Apple Silicon (`arm64`, M1/M2/M3/M4) as well as Intel (`x86_64`).
+- **Dynamic Semaphore Watcher**: Eliminates launch race conditions with a background pulse monitor for `/RobloxPlayerUniq`.
+- **Proper URL Scheme Registration**: Declares `roblox-player` and `roblox` schemes in `CFBundleURLTypes` and registers directly with LaunchServices.
+- **Modern Process Management**: Powered by Darwin's native `libproc` API (`proc_listpids`, `proc_pidinfo`) instead of fragile static struct offsets.
+- **Auto Clean-up**: Restores default Roblox handlers upon exit or cancellation (`SIGINT`/`SIGTERM`) and cleans up temporary clones.
 
-## 🛠️ Usage
+___
 
-### Quick Start:
-1. Download `multiroblox.app` from [Releases](https://github.com/rhythmcreative/multi-roblox-macos/releases).
-2. If downloaded from the internet, remove quarantine attribute:
+[![Typing SVG](https://readme-typing-svg.herokuapp.com?font=Fira+Code&size=23&pause=1000&color=F7F7F7&vCenter=true&width=435&height=30&lines=INSTALLATION)](https://git.io/typing-svg)
+
+1. Download **`multiroblox-2.2.0-macos.zip`** from [Releases](https://github.com/rhythmcreative/multi-roblox-macos/releases/tag/v2.2.0).
+2. Unzip and drag **`multiroblox.app`** to your `/Applications` folder (or run it from Downloads).
+3. If macOS displays a security warning, open Terminal and run:
    ```bash
-   xattr -cr /path/to/multiroblox.app
+   xattr -cr /Applications/multiroblox.app
    ```
-3. Open `multiroblox.app`.
-4. Navigate to the Roblox website in your browser, log in to your first account, and click **Play**.
-5. Switch accounts or open a different browser/profile and click **Play** on another game.
-6. Both instances will run simultaneously without conflict.
 
----
+___
 
-## 🔨 Building from Source
+[![Typing SVG](https://readme-typing-svg.herokuapp.com?font=Fira+Code&size=23&pause=1000&color=F7F7F7&vCenter=true&width=435&height=30&lines=USAGE)](https://git.io/typing-svg)
 
-### Requirements:
-- macOS with Xcode Command Line Tools installed (`xcode-select --install`)
-- Go 1.23 or newer
+1. Launch **`multiroblox.app`** (a small control window will appear).
+2. Go to [roblox.com](https://www.roblox.com) in your browser, log in to your first account, and press **Play** on any game.
+3. Switch accounts or open a private/different browser profile and press **Play** on another game.
+4. Both instances run side-by-side without interference!
+5. When finished, close the app or click **Close all Roblox instances** to cleanly terminate all processes and restore standard handlers.
 
-### Build:
-Run the included build script:
+___
+
+[![Typing SVG](https://readme-typing-svg.herokuapp.com?font=Fira+Code&size=23&pause=1000&color=F7F7F7&vCenter=true&width=435&height=30&lines=BUILD+FROM+SOURCE)](https://git.io/typing-svg)
+
 ```bash
+# Clone repository
+git clone https://github.com/rhythmcreative/multi-roblox-macos.git
+cd multi-roblox-macos
+
+# Build Universal Binary & sign app bundle
 ./build.sh
 ```
-This produces a Universal Binary (`arm64` + `x86_64`), installs it into `multiroblox.app`, and applies ad-hoc codesigning.
 
----
+___
 
-## 📄 License
-MIT License.
+<div align="center">
+
+<p>Made with ❤️ from rhythmcreative.</p>
+
+</div>
